@@ -1,116 +1,106 @@
-extern crate bump_alloc;
-use bump_alloc::BumpAlloc;
-use std::cell::RefCell;
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::cmp::{Ordering, Reverse};
 use std::io::prelude::*;
 use std::io::{stdin, stdout, BufReader, BufWriter};
-use std::rc::Rc;
-#[global_allocator]
-static A: BumpAlloc = BumpAlloc::new();
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq)]
 struct Player {
     name: String,
     skill1: u32,
     skill2: u32,
     skill3: u32,
-    used: bool,
 }
-#[derive(Eq, PartialEq, Debug)]
-struct PlayerKey {
+#[derive(Eq, PartialEq)]
+struct PlayerKey<'a> {
     skill: u32,
-    player: Rc<RefCell<Player>>,
+    name: &'a str,
+    idx: usize,
 }
-impl PartialOrd for PlayerKey {
+impl PartialOrd for PlayerKey<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
-impl Ord for PlayerKey {
+impl Ord for PlayerKey<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.skill > other.skill {
             Ordering::Greater
         } else if self.skill < other.skill {
             Ordering::Less
         } else {
-            self.player.borrow().name.cmp(&other.player.borrow().name)
+            Reverse(&self.name).cmp(&Reverse(&other.name))
         }
     }
 }
 fn main() {
     let mut input = String::new();
     let mut stdin = BufReader::new(stdin());
-    stdin.read_line(&mut input).unwrap();
     let mut stdout = BufWriter::new(stdout());
-    let number_of_players = u32::from_str_radix(&input.trim(), 10).unwrap();
-    let mut skill1_heap = BinaryHeap::new();
-    let mut skill2_heap = BinaryHeap::new();
-    let mut skill3_heap = BinaryHeap::new();
+    stdin.read_line(&mut input).unwrap();
+    let number_of_players = usize::from_str_radix(&input.trim(), 10).unwrap();
     input.truncate(0);
-    while stdin.read_line(&mut input).unwrap() > 0 {
-        let temp: Vec<&str> = input.trim().split(' ').collect();
+    let mut skill1_tree = Vec::with_capacity(number_of_players);
+    let mut skill2_tree = Vec::with_capacity(number_of_players);
+    let mut skill3_tree = Vec::with_capacity(number_of_players);
+    let mut used: Vec<bool> = Vec::with_capacity(number_of_players);
+    stdin.read_to_string(&mut input).unwrap();
+    for line in input.as_str().split("\n") {
+        let temp: Vec<&str> = line.trim().split(' ').collect();
+        let idx = used.len();
         if temp.len() < 2 {
             break;
         }
+        let name = temp[0];
         let skill1 = u32::from_str_radix(temp[1], 10).unwrap();
         let skill2 = u32::from_str_radix(temp[2], 10).unwrap();
         let skill3 = u32::from_str_radix(temp[3], 10).unwrap();
-        let player = Rc::new(RefCell::new(Player {
-            name: temp[0].to_string(),
-            skill1: skill1,
-            skill2: skill2,
-            skill3: skill3,
-            used: false,
-        }));
-        skill1_heap.push(PlayerKey {
+        used.push(false);
+        skill1_tree.push(PlayerKey {
             skill: skill1,
-            player: Rc::clone(&player),
+            name: &name,
+            idx: idx,
         });
-        skill2_heap.push(PlayerKey {
+        skill2_tree.push(PlayerKey {
             skill: skill2,
-            player: Rc::clone(&player),
+            name: &name,
+            idx: idx,
         });
-        skill3_heap.push(PlayerKey {
+        skill3_tree.push(PlayerKey {
             skill: skill3,
-            player: Rc::clone(&player),
+            name: &name,
+            idx: idx,
         });
-        input.truncate(0);
     }
-    let mut n = 1;
-    while n < (number_of_players - number_of_players % 3) {
-        while skill1_heap.peek().is_some() && skill1_heap.peek().unwrap().player.borrow().used {
-            skill1_heap.pop();
+    skill1_tree.sort();
+    skill2_tree.sort();
+    skill3_tree.sort();
+    loop {
+        while skill1_tree.last().is_some() && used[skill1_tree.last().unwrap().idx] {
+            skill1_tree.pop();
         }
-        let skill1_player = match skill1_heap.pop() {
+        let skill1_player = match skill1_tree.pop() {
             Some(e) => e,
             None => return,
         };
-        skill1_player.player.borrow_mut().used = true;
-        while skill2_heap.peek().is_some() && skill2_heap.peek().unwrap().player.borrow().used {
-            skill2_heap.pop();
+        used[skill1_player.idx] = true;
+        while skill2_tree.last().is_some() && used[skill2_tree.last().unwrap().idx] {
+            skill2_tree.pop();
         }
-        let skill2_player = match skill2_heap.pop() {
+        let skill2_player = match skill2_tree.pop() {
             Some(e) => e,
             None => return,
         };
-        skill2_player.player.borrow_mut().used = true;
-        while skill3_heap.peek().is_some() && skill3_heap.peek().unwrap().player.borrow().used {
-            skill3_heap.pop();
+        used[skill2_player.idx] = true;
+        while skill3_tree.last().is_some() && used[skill3_tree.last().unwrap().idx] {
+            skill3_tree.pop();
         }
-        let skill3_player = match skill3_heap.pop() {
+        let skill3_player = match skill3_tree.pop() {
             Some(e) => e,
             None => return,
         };
-        skill3_player.player.borrow_mut().used = true;
-        let mut out = vec![
-            skill1_player.player.borrow().name.clone(),
-            skill2_player.player.borrow().name.clone(),
-            skill3_player.player.borrow().name.clone(),
-        ];
+        used[skill3_player.idx] = true;
+        let mut out = vec![skill1_player.name, skill2_player.name, skill3_player.name];
         out.sort();
         stdout
             .write_fmt(format_args!("{} {} {}\n", out[0], out[1], out[2]))
             .unwrap();
-        n = n + 1;
     }
 }
