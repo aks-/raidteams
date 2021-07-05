@@ -1,9 +1,13 @@
+extern crate bump_alloc;
+use bump_alloc::BumpAlloc;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::io::prelude::*;
 use std::io::{stdin, stdout, BufReader, BufWriter};
 use std::rc::Rc;
+#[global_allocator]
+static A: BumpAlloc = BumpAlloc::new();
 #[derive(Eq, PartialEq, Debug)]
 struct Player {
     name: String,
@@ -33,7 +37,7 @@ impl Ord for PlayerKey {
         }
     }
 }
-fn main() -> Result<(), String> {
+fn main() {
     let mut input = String::new();
     let mut stdin = BufReader::new(stdin());
     stdin.read_line(&mut input).unwrap();
@@ -79,7 +83,7 @@ fn main() -> Result<(), String> {
         }
         let skill1_player = match skill1_heap.pop() {
             Some(e) => e,
-            None => return Ok(()),
+            None => return,
         };
         skill1_player.player.borrow_mut().used = true;
         while skill2_heap.peek().is_some() && skill2_heap.peek().unwrap().player.borrow().used {
@@ -87,7 +91,7 @@ fn main() -> Result<(), String> {
         }
         let skill2_player = match skill2_heap.pop() {
             Some(e) => e,
-            None => return Ok(()),
+            None => return,
         };
         skill2_player.player.borrow_mut().used = true;
         while skill3_heap.peek().is_some() && skill3_heap.peek().unwrap().player.borrow().used {
@@ -95,16 +99,18 @@ fn main() -> Result<(), String> {
         }
         let skill3_player = match skill3_heap.pop() {
             Some(e) => e,
-            None => return Ok(()),
+            None => return,
         };
         skill3_player.player.borrow_mut().used = true;
-        stdout.write_fmt(format_args!(
-            "{} {} {}\n",
-            skill1_player.player.borrow().name,
-            skill2_player.player.borrow().name,
-            skill3_player.player.borrow().name
-        )).unwrap();
+        let mut out = vec![
+            skill1_player.player.borrow().name.clone(),
+            skill2_player.player.borrow().name.clone(),
+            skill3_player.player.borrow().name.clone(),
+        ];
+        out.sort();
+        stdout
+            .write_fmt(format_args!("{} {} {}\n", out[0], out[1], out[2]))
+            .unwrap();
         n = n + 1;
     }
-    Ok(())
 }
