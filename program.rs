@@ -35,10 +35,10 @@ fn main() {
     let mut skill3_list = Vec::with_capacity(number_of_players * 2);
     let mut used: Vec<bool> = Vec::with_capacity(number_of_players);
     stdin.read_to_string(&mut input).unwrap();
-    for line in input.as_str().lines() {
+    for line in input.lines() {
         let idx = used.len();
         let mut field = line.split(" ");
-        let name = match field.current() {
+        let name = match field.next() {
             Some(e) => e,
             None => break,
         };
@@ -75,7 +75,7 @@ fn main() {
     skill2_list.sort();
     skill3_list.sort();
     loop {
-        while skill1_list.pop().is_some() && used[skill1_list.last().unwrap().idx] {
+        while skill1_list.last().is_some() && used[skill1_list.last().unwrap().idx] {
             skill1_list.pop();
         }
         let skill1_player = match skill1_list.pop() {
@@ -109,3 +109,4 @@ fn main() {
         stdout.write("\n".as_bytes()).unwrap();
     }
 }
+
