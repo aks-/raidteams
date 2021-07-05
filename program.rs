@@ -71,9 +71,9 @@ fn main() {
             idx: idx,
         });
     }
-    skill1_list.sort();
-    skill2_list.sort();
-    skill3_list.sort();
+    skill1_list.sort_unstable();
+    skill2_list.sort_unstable();
+    skill3_list.sort_unstable();
     loop {
         while skill1_list.last().is_some() && used[skill1_list.last().unwrap().idx] {
             skill1_list.pop();
@@ -100,7 +100,7 @@ fn main() {
         };
         used[skill3_player.idx] = true;
         let mut out = vec![skill1_player.name, skill2_player.name, skill3_player.name];
-        out.sort();
+        out.sort_unstable();
         stdout.write(out[0].as_bytes()).unwrap();
         stdout.write(" ".as_bytes()).unwrap();
         stdout.write(out[1].as_bytes()).unwrap();
